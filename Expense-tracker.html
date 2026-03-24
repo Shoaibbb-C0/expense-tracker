@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+
+    <style>
+        /* ============================================================
+           CSS VARIABLES (Design Tokens)
+           ────────────────────────────────────────────────────────────
+           All colors, sizes, and shadows are defined HERE.
+           Change one variable → entire app updates.
+           
+           Think of these as "settings" for the whole design.
+           ============================================================ */
+        :root {
+            /* Main brand colors */
+            --primary:        #6C5CE7;      /* Purple — main brand color */
+            --primary-light:  #A29BFE;      /* Lighter purple — hover states */
+            --primary-soft:   rgba(108, 92, 231, 0.08);  /* Very faint purple — backgrounds */
+
+            /* Gradient used on buttons and the total card */
+            --gradient:       linear-gradient(135deg, #6C5CE7 0%, #A855F7 100%);
+            --gradient-hover: linear-gradient(135deg, #5A4BD1 0%, #9333EA 100%);
+
+            /* Semantic colors (colors with meaning) */
+            --danger:         #EF4444;      /* Red — delete, errors */
+            --danger-soft:    rgba(239, 68, 68, 0.08);
+            --success:        #10B981;      /* Green — save confirmation */
+            --warning:        #F59E0B;      /* Amber — warnings */
+
+            /* Neutral grays (used for text, borders, backgrounds) */
+            --bg-page:        #F3F4F6;      /* Page background */
+            --bg-card:        #FFFFFF;      /* Card background */
+            --bg-item:        #F9FAFB;      /* Expense item background */
+            --bg-item-hover:  #F3F4F6;      /* Expense item on hover */
+
+            --border:         #E5E7EB;      /* Default border color */
+            --border-light:   #F3F4F6;      /* Very subtle border */
+
+            --text-primary:   #111827;      /* Headings, bold text */
+            --text-secondary: #6B7280;      /* Descriptions, labels */
+            --text-muted:     #9CA3AF;      /* Dates, hints */
+            --text-faint:     #D1D5DB;      /* Placeholders */
+
+            /* Spacing scale (consistent spacing throughout) */
+            --space-xs:       4px;
+            --space-sm:       8px;
+            --space-md:       16px;
+            --space-lg:       24px;
+            --space-xl:       32px;
+
+            /* Border radius (roundness) */
+            --radius-sm:      8px;
+            --radius-md:      12px;
+            --radius-lg:      16px;
+            --radius-xl:      20px;
+            --radius-full:    9999px;       /* Fully round (pill shape) */
+
+            /* Shadows */
+            --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md:      0 4px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg:      0 8px 24px rgba(0, 0, 0, 0.08);
+            --shadow-glow:    0 4px 16px rgba(108, 92, 231, 0.25);
+
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition:      0.25s ease;
+            --transition-slow: 0.4s ease;
+        }
+
+        /* ============ RESET & BASE ============ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                         'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: var(--space-lg);
+            line-height: 1.5;               /* More readable text */
+            -webkit-font-smoothing: antialiased;  /* Smoother fonts on Mac */
+        }
+
+        /* ============ LAYOUT CONTAINER ============ */
+        .app {
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* ============ HEADER ============ */
+        .header {
+            text-align: center;
+            padding: var(--space-xl) 0;
+        }
+
+        .header-icon {
+            font-size: 2.8rem;
+            display: block;
+            margin-bottom: var(--space-sm);
+
+            /* Subtle bounce animation when page loads */
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0%   { transform: scale(0.5); opacity: 0; }
+            60%  { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;        /* Tighter letter spacing for headings */
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin-top: var(--space-xs);
+            font-size: 0.9rem;
+        }
+
+        /* ============ REUSABLE CARD ============ */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);  /* Subtle border for definition */
+            transition: box-shadow var(--transition);
+        }
+
+        /* Cards lift slightly on hover */
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            color: var(--text-primary);
+        }
+
+        .card-title-icon {
+            font-size: 1.1rem;
+        }
+
+        /* ============ SUMMARY CARDS ROW ============ */
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            padding: var(--space-md) var(--space-sm);
+            text-align: center;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        /* Summary cards lift on hover */
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Special gradient card for total */
+        .summary-card.primary {
+            background: var(--gradient);
+            border: none;
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .summary-card.primary:hover {
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.35);
+        }
+
+        .summary-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            display: block;
+            letter-spacing: -0.3px;
+        }
+
+        /* ============ FORM SECTION ============ */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.2px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 11px var(--space-md);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.92rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        /* Placeholder text */
+        .form-group input::placeholder {
+            color: var(--text-faint);
+        }
+
+        /* When input is focused (clicked into) */
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);  /* Purple glow ring */
+        }
+
+        /* ============ ADD BUTTON ============ */
+        .add-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform var(--transition-fast),
+                        box-shadow var(--transition-fast),
+                        background var(--transition-fast);
+            letter-spacing: 0.2px;
+        }
+
+        .add-btn:hover {
+            background: var(--gradient-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .add-btn:active {
+            transform: translateY(0) scale(0.99);
+            box-shadow: none;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.78rem;
+            margin-top: var(--space-sm);
+            text-align: center;
+            min-height: 20px;
+            font-weight: 500;
+        }
+
+        /* ============ SECTION DIVIDER ============ */
+        /* The filter bar and list header area */
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-md);
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+
+        /* ============ FILTER TABS ============ */
+        .filter-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 5px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--primary-light);
+            color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Expense count badge inside filter tab */
+        .filter-count {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: var(--radius-full);
+            padding: 0 6px;
+            font-size: 0.65rem;
+            margin-left: 4px;
+            font-weight: 700;
+        }
+
+        /* When tab is NOT active, style the count differently */
+        .filter-tab:not(.active) .filter-count {
+            background: var(--bg-item);
+            color: var(--text-muted);
+        }
+
+        /* Clear All button */
+        .clear-all-btn {
+            padding: 5px 12px;
+            border: 1.5px solid var(--danger);
+            border-radius: var(--radius-sm);
+            background: none;
+            color: var(--danger);
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+        }
+
+        .clear-all-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* ============ EXPENSE LIST ============ */
+        .expense-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        /* Each expense row */
+        .expense-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            background: var(--bg-item);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            transition: background var(--transition-fast),
+                        transform var(--transition-fast);
+            animation: slideIn 0.35s ease-out both;
+
+            /* Left color accent bar */
+            border-left: 3px solid transparent;
+        }
+
+        .expense-item:hover {
+            background: var(--bg-item-hover);
+            transform: translateX(2px);    /* Shift right slightly on hover */
+        }
+
+        /* Staggered animation — each item slides in slightly later */
+        .expense-item:nth-child(1)  { animation-delay: 0s; }
+        .expense-item:nth-child(2)  { animation-delay: 0.04s; }
+        .expense-item:nth-child(3)  { animation-delay: 0.08s; }
+        .expense-item:nth-child(4)  { animation-delay: 0.12s; }
+        .expense-item:nth-child(5)  { animation-delay: 0.16s; }
+        .expense-item:nth-child(6)  { animation-delay: 0.20s; }
+        .expense-item:nth-child(7)  { animation-delay: 0.24s; }
+        .expense-item:nth-child(8)  { animation-delay: 0.28s; }
+        .expense-item:nth-child(9)  { animation-delay: 0.32s; }
+        .expense-item:nth-child(10) { animation-delay: 0.36s; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px) translateX(-4px); }
+            to   { opacity: 1; transform: translateY(0) translateX(0); }
+        }
+
+        /* Category icon */
+        .expense-icon {
+            font-size: 1.3rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            flex-shrink: 0;
+        }
+
+        /* Details text */
+        .expense-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .expense-category {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+        }
+
+        .expense-desc {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .expense-date {
+            font-size: 0.68rem;
+            color: var(--text-faint);
+            margin-top: 2px;
+        }
+
+        /* Right side — amount and delete */
+        .expense-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            flex-shrink: 0;
+        }
+
+        .expense-amount {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--danger);
+            letter-spacing: -0.2px;
+        }
+
+        /* Delete button — icon only (cleaner) */
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-faint);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-fast);
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .delete-btn:hover {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .delete-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* ============ EMPTY STATE ============ */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-xl) var(--space-lg);
+            color: var(--text-muted);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: var(--space-md);
+            opacity: 0.6;
+        }
+
+        .empty-state .empty-title {
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .empty-state .empty-sub {
+            font-size: 0.82rem;
+        }
+
+        /* ============ TOTAL BAR ============ */
+        .total-bar {
+            border-top: 2px dashed var(--border);   /* Dashed line looks softer */
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-bar-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .total-bar-count {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .total-bar-amount {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ============ CATEGORY BREAKDOWN ============ */
+        .breakdown-item {
+            margin-bottom: var(--space-md);
+        }
+
+        .breakdown-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            margin-bottom: 6px;
+        }
+
+        .breakdown-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .breakdown-amount {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.78rem;
+        }
+
+        .breakdown-pct {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Bar track */
+        .breakdown-bar-bg {
+            height: 10px;
+            background: var(--bg-item);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+
+        /* Bar fill */
+        .breakdown-bar {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width 0.6s ease-out;
+            min-width: 4px;            /* Always show at least a tiny sliver */
+        }
+
+        /* ============ SAVE STATUS (toast-style) ============ */
+        .save-status {
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-faint);
+            padding: var(--space-sm) 0 var(--space-md);
+            min-height: 32px;
+            transition: color var(--transition);
+            font-weight: 500;
+        }
+
+        .save-status.saved {
+            color: var(--success);
+            animation: flashStatus 2.5s ease-out;
+        }
+
+        @keyframes flashStatus {
+            0%   { color: var(--success); }
+            75%  { color: var(--success); }
+            100% { color: var(--text-faint); }
+        }
+
+        /* ============ RESPONSIVE (phones) ============ */
+        @media (max-width: 500px) {
+            body {
+                padding: var(--space-md);
+            }
+
+            .summary-row {
+                grid-template-columns: 1fr;
+                gap: var(--space-sm);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            .header-icon {
+                font-size: 2.2rem;
+            }
+
+            .summary-value {
+                font-size: 1.1rem;
+            }
+
+            .card {
+                padding: var(--space-md);
+            }
+
+            .expense-item {
+                padding: 12px;
+                gap: var(--space-sm);
+            }
+
+            .expense-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+            }
+
+            .total-bar-amount {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* ============ ACCESSIBILITY ============ */
+        /* Show a visible outline when using keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* Remove outline for mouse clicks */
+        *:focus:not(:focus-visible) {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- ============ HEADER ============ -->
+    <div class="header">
+        <span class="header-icon">💰</span>
+        <h1>Expense Tracker</h1>
+        <p>Keep track of where your money goes</p>
+    </div>
+
+    <!-- ============ SUMMARY CARDS ============ -->
+    <div class="summary-row">
+        <!-- The "primary" class gives this card the gradient -->
+        <div class="summary-card primary">
+            <span class="summary-label">Total Spent</span>
+            <span class="summary-value" id="totalSpent">₹0.00</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Expenses</span>
+            <span class="summary-value" id="expenseCount">0</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Average</span>
+            <span class="summary-value" id="avgExpense">₹0.00</span>
+        </div>
+    </div>
+
+    <!-- ============ ADD EXPENSE FORM ============ -->
+    <div class="card">
+        <div class="card-title">
+            <span class="card-title-icon">✏️</span>
+            Add New Expense
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="amountInput">Amount (₹)</label>
+                <input type="number" id="amountInput"
+                       placeholder="0.00" min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="categorySelect">Category</label>
+                <select id="categorySelect">
+                    <option value="">Select category...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="descInput">Description (optional)</label>
+            <input type="text" id="descInput"
+                   placeholder="What was this expense for?">
+        </div>
+
+        <button class="add-btn" id="addBtn">+ Add Expense</button>
+        <p class="error-msg" id="errorMsg"></p>
+    </div>
+
+    <!-- ============ EXPENSE LIST ============ -->
+    <div class="card">
+        <div class="list-header">
+            <div class="filter-tabs" id="filterTabs"></div>
+            <button class="clear-all-btn" id="clearAllBtn"
+                    style="display: none;">
+                Clear All
+            </button>
+        </div>
+
+        <div class="expense-list" id="expenseList">
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p class="empty-title">No expenses yet</p>
+                <p class="empty-sub">Add your first expense above!</p>
+            </div>
+        </div>
+
+        <div id="totalBar"></div>
+    </div>
+
+    <!-- ============ CATEGORY BREAKDOWN ============ -->
+    <div class="card" id="breakdownCard" style="display: none;">
+        <div class="card-title">
+            <span class="card-title-icon">📊</span>
+            Spending by Category
+        </div>
+        <div id="breakdownList"></div>
+    </div>
+
+    <!-- ============ SAVE STATUS ============ -->
+    <div class="save-status" id="saveStatus"></div>
+
+</div>
+
+<script>
+// ================================================================
+//  CURRENCY
+// ================================================================
+var CURRENCY = '₹';
+
+
+// ================================================================
+//  CATEGORY DEFINITIONS
+//  NEW: Added "bg" color for lighter icon backgrounds
+// ================================================================
+var categories = [
+    { name: 'Food',          icon: '🍔', color: '#EF4444', bg: '#FEF2F2' },
+    { name: 'Transport',     icon: '🚗', color: '#06B6D4', bg: '#ECFEFF' },
+    { name: 'Shopping',      icon: '🛍️', color: '#F59E0B', bg: '#FFFBEB' },
+    { name: 'Entertainment', icon: '🎮', color: '#8B5CF6', bg: '#F5F3FF' },
+    { name: 'Bills',         icon: '💡', color: '#EC4899', bg: '#FDF2F8' },
+    { name: 'Health',        icon: '🏥', color: '#10B981', bg: '#ECFDF5' },
+    { name: 'Education',     icon: '📚', color: '#3B82F6', bg: '#EFF6FF' },
+    { name: 'Other',         icon: '📦', color: '#6B7280', bg: '#F9FAFB' }
+];
+
+
+// ================================================================
+//  APP STATE
+// ================================================================
+var expenses = [];
+var activeFilter = 'All';
+var nextId = 1;
+
+
+// ================================================================
+//  DOM REFERENCES
+// ================================================================
+var amountInput    = document.getElementById('amountInput');
+var categorySelect = document.getElementById('categorySelect');
+var descInput      = document.getElementById('descInput');
+var addBtn         = document.getElementById('addBtn');
+var errorMsg       = document.getElementById('errorMsg');
+var expenseList    = document.getElementById('expenseList');
+var filterTabs     = document.getElementById('filterTabs');
+var totalSpent     = document.getElementById('totalSpent');
+var expenseCount   = document.getElementById('expenseCount');
+var avgExpense     = document.getElementById('avgExpense');
+var clearAllBtn    = document.getElementById('clearAllBtn');
+var breakdownCard  = document.getElementById('breakdownCard');
+var breakdownList  = document.getElementById('breakdownList');
+var totalBar       = document.getElementById('totalBar');
+var saveStatus     = document.getElementById('saveStatus');
+
+
+// ================================================================
+//  POPULATE DROPDOWN
+// ================================================================
+function populateDropdown() {
+    for (var i = 0; i < categories.length; i++) {
+        var option = document.createElement('option');
+        option.value = categories[i].name;
+        option.textContent = categories[i].icon + '  ' + categories[i].name;
+        categorySelect.appendChild(option);
+    }
+}
+
+
+// ================================================================
+//  EVENT LISTENERS
+// ================================================================
+addBtn.addEventListener('click', addExpense);
+
+amountInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { addExpense(); }
+});
+
+descInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { addExpense(); }
+});
+
+clearAllBtn.addEventListener('click', function() {
+    if (confirm('Delete ALL expenses? This cannot be undone.')) {
+        expenses = [];
+        activeFilter = 'All';
+        saveToStorage();
+        renderAll();
+    }
+});
+
+
+// ================================================================
+//  ADD EXPENSE
+// ================================================================
+function addExpense() {
+    var amount      = parseFloat(amountInput.value);
+    var category    = categorySelect.value;
+    var description = descInput.value.trim();
+
+    if (isNaN(amount) || amount <= 0) {
+        showError('Please enter a valid amount greater than 0.');
+        return;
+    }
+    if (category === '') {
+        showError('Please select a category.');
+        return;
+    }
+
+    showError('');
+
+    var expense = {
+        id:          nextId,
+        amount:      amount,
+        category:    category,
+        description: description,
+        date:        new Date().toISOString()
+    };
+
+    nextId = nextId + 1;
+    expenses.push(expense);
+
+    amountInput.value    = '';
+    categorySelect.value = '';
+    descInput.value      = '';
+    amountInput.focus();
+
+    saveToStorage();
+    renderAll();
+}
+
+
+// ================================================================
+//  DELETE EXPENSE
+// ================================================================
+function deleteExpense(id) {
+    expenses = expenses.filter(function(exp) {
+        return exp.id !== id;
+    });
+    saveToStorage();
+    renderAll();
+}
+
+
+// ================================================================
+//  SET FILTER
+// ================================================================
+function setFilter(category) {
+    activeFilter = category;
+    renderFilterTabs();
+    renderExpenseList();
+    renderTotalBar();
+}
+
+
+// ================================================================
+//  RENDER ALL
+// ================================================================
+function renderAll() {
+    renderSummary();
+    renderFilterTabs();
+    renderExpenseList();
+    renderTotalBar();
+    renderBreakdown();
+    clearAllBtn.style.display = expenses.length > 0 ? 'block' : 'none';
+}
+
+
+// ================================================================
+//  RENDER SUMMARY
+// ================================================================
+function renderSummary() {
+    var total = 0;
+    for (var i = 0; i < expenses.length; i++) {
+        total = total + expenses[i].amount;
+    }
+
+    var count = expenses.length;
+    var avg   = count > 0 ? total / count : 0;
+
+    totalSpent.textContent   = CURRENCY + total.toFixed(2);
+    expenseCount.textContent = count;
+    avgExpense.textContent   = CURRENCY + avg.toFixed(2);
+}
+
+
+// ================================================================
+//  RENDER FILTER TABS
+//  NEW: Each tab shows a count badge like  [🍔 Food  3]
+// ================================================================
+function renderFilterTabs() {
+    // Count expenses per category
+    var categoryCounts = {};
+    for (var i = 0; i < expenses.length; i++) {
+        var cat = expenses[i].category;
+        if (!categoryCounts[cat]) {
+            categoryCounts[cat] = 0;
+        }
+        categoryCounts[cat] = categoryCounts[cat] + 1;
+    }
+
+    // Get list of used categories
+    var usedCategories = [];
+    for (var cat in categoryCounts) {
+        usedCategories.push(cat);
+    }
+
+    // Reset filter if category was deleted
+    if (activeFilter !== 'All' && usedCategories.indexOf(activeFilter) === -1) {
+        activeFilter = 'All';
+    }
+
+    // Build "All" tab with total count
+    var isAllActive = (activeFilter === 'All') ? ' active' : '';
+    var html = '<button class="filter-tab' + isAllActive + '" onclick="setFilter(\'All\')">';
+    html += 'All';
+    html += '<span class="filter-count">' + expenses.length + '</span>';
+    html += '</button>';
+
+    // Build tabs for each used category
+    for (var i = 0; i < usedCategories.length; i++) {
+        var cat    = usedCategories[i];
+        var info   = getCategoryInfo(cat);
+        var active = (activeFilter === cat) ? ' active' : '';
+        var count  = categoryCounts[cat];
+
+        html += '<button class="filter-tab' + active + '" ';
+        html += 'onclick="setFilter(\'' + cat + '\')">';
+        html += info.icon + ' ' + cat;
+        html += '<span class="filter-count">' + count + '</span>';
+        html += '</button>';
+    }
+
+    filterTabs.innerHTML = html;
+}
+
+
+// ================================================================
+//  RENDER EXPENSE LIST
+//  NEW: Each item has a colored left border accent
+// ================================================================
+function renderExpenseList() {
+    var filtered = [];
+    for (var i = 0; i < expenses.length; i++) {
+        if (activeFilter === 'All' || expenses[i].category === activeFilter) {
+            filtered.push(expenses[i]);
+        }
+    }
+
+    if (filtered.length === 0) {
+        var msg = expenses.length === 0
+            ? 'Add your first expense above!'
+            : 'No expenses in this category.';
+
+        expenseList.innerHTML =
+            '<div class="empty-state">' +
+                '<span class="empty-icon">📭</span>' +
+                '<p class="empty-title">No expenses</p>' +
+                '<p class="empty-sub">' + msg + '</p>' +
+            '</div>';
+        return;
+    }
+
+    var sorted = filtered.slice().reverse();
+
+    var html = '';
+    for (var i = 0; i < sorted.length; i++) {
+        var exp     = sorted[i];
+        var info    = getCategoryInfo(exp.category);
+        var dateStr = formatDate(exp.date);
+        var desc    = escapeHTML(exp.description) || 'No description';
+
+        // NEW: border-left uses the category color (accent bar)
+        html += '<div class="expense-item" style="border-left-color:' + info.color + '">';
+        // NEW: icon background uses the dedicated "bg" color
+        html +=   '<div class="expense-icon" style="background:' + info.bg + '">' + info.icon + '</div>';
+        html +=   '<div class="expense-details">';
+        html +=     '<div class="expense-category">' + exp.category + '</div>';
+        html +=     '<div class="expense-desc">' + desc + '</div>';
+        html +=     '<div class="expense-date">' + dateStr + '</div>';
+        html +=   '</div>';
+        html +=   '<div class="expense-right">';
+        html +=     '<span class="expense-amount">-' + CURRENCY + exp.amount.toFixed(2) + '</span>';
+        // NEW: Delete button is now just a trash icon (cleaner)
+        html +=     '<button class="delete-btn" onclick="deleteExpense(' + exp.id + ')" title="Delete this expense">🗑️</button>';
+        html +=   '</div>';
+        html += '</div>';
+    }
+
+    expenseList.innerHTML = html;
+}
+
+
+// ================================================================
+//  RENDER TOTAL BAR
+// ================================================================
+function renderTotalBar() {
+    if (expenses.length === 0) {
+        totalBar.innerHTML = '';
+        return;
+    }
+
+    var filtered = [];
+    for (var i = 0; i < expenses.length; i++) {
+        if (activeFilter === 'All' || expenses[i].category === activeFilter) {
+            filtered.push(expenses[i]);
+        }
+    }
+
+    if (filtered.length === 0) {
+        totalBar.innerHTML = '';
+        return;
+    }
+
+    var total = 0;
+    for (var i = 0; i < filtered.length; i++) {
+        total = total + filtered[i].amount;
+    }
+
+    var count = filtered.length;
+    var itemWord = count === 1 ? 'expense' : 'expenses';
+
+    var labelText = 'Total';
+    if (activeFilter !== 'All') {
+        labelText = 'Total for ' + activeFilter;
+    }
+
+    var html = '';
+    html += '<div class="total-bar">';
+    html +=   '<span class="total-bar-label">';
+    html +=     labelText + ' ';
+    html +=     '<span class="total-bar-count">(' + count + ' ' + itemWord + ')</span>';
+    html +=   '</span>';
+    html +=   '<span class="total-bar-amount">' + CURRENCY + total.toFixed(2) + '</span>';
+    html += '</div>';
+
+    totalBar.innerHTML = html;
+}
+
+
+// ================================================================
+//  RENDER BREAKDOWN
+//  NEW: Percentage shown separately with muted color
+// ================================================================
+function renderBreakdown() {
+    if (expenses.length === 0) {
+        breakdownCard.style.display = 'none';
+        return;
+    }
+    breakdownCard.style.display = 'block';
+
+    var categoryTotals = {};
+    var grandTotal = 0;
+
+    for (var i = 0; i < expenses.length; i++) {
+        var cat = expenses[i].category;
+        if (!categoryTotals[cat]) {
+            categoryTotals[cat] = 0;
+        }
+        categoryTotals[cat] = categoryTotals[cat] + expenses[i].amount;
+        grandTotal = grandTotal + expenses[i].amount;
+    }
+
+    var sorted = [];
+    for (var cat in categoryTotals) {
+        sorted.push({ name: cat, total: categoryTotals[cat] });
+    }
+    sorted.sort(function(a, b) {
+        return b.total - a.total;
+    });
+
+    var maxTotal = sorted[0].total;
+
+    var html = '';
+    for (var i = 0; i < sorted.length; i++) {
+        var info       = getCategoryInfo(sorted[i].name);
+        var percentage = (sorted[i].total / grandTotal * 100).toFixed(0);
+        var barWidth   = (sorted[i].total / maxTotal * 100).toFixed(1);
+
+        html += '<div class="breakdown-item">';
+        html +=   '<div class="breakdown-header">';
+        html +=     '<span class="breakdown-name">' + info.icon + '  ' + sorted[i].name + '</span>';
+        html +=     '<span class="breakdown-amount">' + CURRENCY + sorted[i].total.toFixed(2);
+        html +=       ' <span class="breakdown-pct">(' + percentage + '%)</span>';
+        html +=     '</span>';
+        html +=   '</div>';
+        html +=   '<div class="breakdown-bar-bg">';
+        html +=     '<div class="breakdown-bar" style="width:' + barWidth + '%; background:' + info.color + '"></div>';
+        html +=   '</div>';
+        html += '</div>';
+    }
+
+    breakdownList.innerHTML = html;
+}
+
+
+// ================================================================
+//  HELPERS
+// ================================================================
+
+function getCategoryInfo(name) {
+    for (var i = 0; i < categories.length; i++) {
+        if (categories[i].name === name) {
+            return categories[i];
+        }
+    }
+    return { name: name, icon: '📦', color: '#6B7280', bg: '#F9FAFB' };
+}
+
+function formatDate(isoString) {
+    var date   = new Date(isoString);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun',
+                  'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    var month   = months[date.getMonth()];
+    var day     = date.getDate();
+    var year    = date.getFullYear();
+    var hours   = date.getHours();
+    var minutes = date.getMinutes();
+    var ampm    = hours >= 12 ? 'PM' : 'AM';
+
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    var minStr = minutes < 10 ? '0' + minutes : minutes;
+
+    return month + ' ' + day + ', ' + year + '  ·  ' + hours + ':' + minStr + ' ' + ampm;
+}
+
+function showError(msg) {
+    errorMsg.textContent = msg;
+}
+
+function escapeHTML(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+
+// ================================================================
+//  LOCAL STORAGE
+// ================================================================
+
+function saveToStorage() {
+    try {
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        localStorage.setItem('nextId', nextId.toString());
+        showSaveStatus('✓ Saved');
+    } catch (error) {
+        console.log('Could not save:', error);
+        showSaveStatus('⚠ Could not save');
+    }
+}
+
+function loadFromStorage() {
+    try {
+        var saved = localStorage.getItem('expenses');
+        if (saved !== null) {
+            expenses = JSON.parse(saved);
+        }
+        var savedId = localStorage.getItem('nextId');
+        if (savedId !== null) {
+            nextId = parseInt(savedId);
+        }
+        if (expenses.length > 0) {
+            showSaveStatus('Loaded ' + expenses.length + ' expenses');
+        }
+    } catch (error) {
+        console.log('Could not load:', error);
+        expenses = [];
+        nextId = 1;
+    }
+}
+
+function showSaveStatus(message) {
+    saveStatus.textContent = message;
+    saveStatus.className = 'save-status';
+    void saveStatus.offsetWidth;
+    saveStatus.className = 'save-status saved';
+}
+
+
+// ================================================================
+//  START
+// ================================================================
+populateDropdown();
+loadFromStorage();
+renderAll();
+</script>
+
+</body>
+</html>
