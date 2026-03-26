@@ -14,8 +14,3 @@ A simple expense tracker built using HTML, CSS, and JavaScript.
 - Event handling
 - Working with arrays
 - Using localStorage
-
-## Future Improvements
-- Add edit feature
-- Add categories filter
-- Improve UI
