@@ -68,17 +68,32 @@
 
         <!-- Search & Filter Bar -->
         <div class="search-filter-bar">
-            <div class="search-wrapper">
-                <span class="search-icon">🔍</span>
-                <input type="text" class="search-input"
-                       id="searchInput" placeholder="Search expenses...">
-                <button class="search-clear hidden"
-                        id="searchClear">&times;</button>
-            </div>
-            <select class="filter-dropdown" id="filterDropdown">
-                <option value="All">All Categories</option>
-            </select>
-        </div>
+
+    <!-- Search (unchanged) -->
+    <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input"
+               id="searchInput" placeholder="Search expenses...">
+        <button class="search-clear hidden"
+                id="searchClear">&times;</button>
+    </div>
+
+    <!-- Category filter (unchanged) -->
+    <select class="filter-dropdown" id="filterDropdown">
+        <option value="All">All Categories</option>
+    </select>
+
+    <!-- NEW: Sort dropdown -->
+    <select class="sort-dropdown" id="sortDropdown">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="amount-desc">Highest amount</option>
+        <option value="amount-asc">Lowest amount</option>
+        <option value="category-asc">Category A→Z</option>
+        <option value="category-desc">Category Z→A</option>
+    </select>
+
+</div>
 
         <!-- Results Info -->
         <div class="results-info" id="resultsInfo" style="display:none">
