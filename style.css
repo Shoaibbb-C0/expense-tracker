@@ -263,10 +263,30 @@ body {
    ================================================================ */
 .search-filter-bar {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;  /* Search gets more space */
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
 }
+
+/* Sort dropdown (same style as filter dropdown) */
+.sort-dropdown {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.sort-dropdown:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
 
 .search-wrapper {
     position: relative;
@@ -733,6 +753,15 @@ body {
     .expense-icon { width: 36px; height: 36px; font-size: 1.1rem; }
 }
 
+
+@media (max-width: 500px) {
+    .search-filter-bar {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
 /* ================================================================
    ACCESSIBILITY
    ================================================================ */
@@ -744,3 +773,4 @@ body {
 *:focus:not(:focus-visible) {
     outline: none;
 }
+
