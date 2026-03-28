@@ -673,3 +673,250 @@ function showSaveStatus(message) {
    START
    ================================================================ */
 init();
+
+
+/* ================================================================
+   ================================================================
+   TIME SUMMARY — NEW FEATURE
+   Added below init() so nothing above is touched.
+   ================================================================
+   ================================================================ */
+
+
+/* ────────────────────────────────────────────
+   NEW DOM REFERENCES
+   ──────────────────────────────────────────── */
+var timeSummaryCard    = document.getElementById('timeSummaryCard');
+var timeSummaryContent = document.getElementById('timeSummaryContent');
+
+
+/* ────────────────────────────────────────────
+   DATE HELPER: Is expense from today?
+   
+   Compares just the date part (ignores time).
+   
+   Example:
+     Expense date: "2025-01-20T14:30:00Z"
+     Today:        "2025-01-20"
+     Same day? YES → return true
+   ──────────────────────────────────────────── */
+function isToday(dateString) {
+    var expenseDate = new Date(dateString);
+    var now         = new Date();
+
+    return expenseDate.getDate()     === now.getDate() &&
+           expenseDate.getMonth()    === now.getMonth() &&
+           expenseDate.getFullYear() === now.getFullYear();
+}
+
+
+/* ────────────────────────────────────────────
+   DATE HELPER: Is expense within last N days?
+   
+   Creates a "cutoff" date N days ago.
+   If expense date >= cutoff → it's within range.
+   
+   Example (N = 7):
+     Today:    Jan 20
+     Cutoff:   Jan 20 - 7 = Jan 13 (midnight)
+     
+     Expense on Jan 15 → Jan 15 >= Jan 13? YES
+     Expense on Jan 10 → Jan 10 >= Jan 13? NO
+   ──────────────────────────────────────────── */
+function isWithinLastDays(dateString, days) {
+    var expenseDate = new Date(dateString);
+
+    // Create cutoff: today minus N days, at midnight
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    cutoff.setHours(0, 0, 0, 0);
+
+    return expenseDate >= cutoff;
+}
+
+
+/* ────────────────────────────────────────────
+   DATE HELPER: Is expense in the current month?
+   
+   Checks if expense's month AND year match today's.
+   
+   Example:
+     Today: January 2025
+     
+     Expense on Jan 15, 2025 → month=0, year=2025 → MATCH
+     Expense on Dec 20, 2024 → month=11, year=2024 → NO MATCH
+     Expense on Jan 10, 2024 → month=0, year=2024  → NO MATCH
+                                                      (wrong year!)
+   ──────────────────────────────────────────── */
+function isCurrentMonth(dateString) {
+    var expenseDate = new Date(dateString);
+    var now         = new Date();
+
+    return expenseDate.getMonth()    === now.getMonth() &&
+           expenseDate.getFullYear() === now.getFullYear();
+}
+
+
+/* ────────────────────────────────────────────
+   CALCULATE TIME PERIOD STATS
+   
+   Takes ALL expenses and a "checker" function.
+   Returns { total, count, avg } for matching expenses.
+   
+   checker = a function like isToday or isCurrentMonth
+             that returns true/false for each expense.
+   
+   avgDays = how many days to divide by for daily average
+             (7 for weekly, ~30 for monthly, 1 for today)
+   ──────────────────────────────────────────── */
+function getTimePeriodStats(expenses, checker, avgDays) {
+    var total = 0;
+    var count = 0;
+
+    for (var i = 0; i < expenses.length; i++) {
+        if (checker(expenses[i].date)) {
+            total += expenses[i].amount;
+            count += 1;
+        }
+    }
+
+    var avg = avgDays > 0 ? total / avgDays : 0;
+
+    return {
+        total: total,
+        count: count,
+        avg:   avg
+    };
+}
+
+
+/* ────────────────────────────────────────────
+   GET NUMBER OF DAYS ELAPSED IN CURRENT MONTH
+   
+   Jan 20 → returns 20 (20 days have passed)
+   Feb 1  → returns 1
+   
+   Used to calculate accurate daily average for
+   "this month" (instead of always dividing by 30).
+   ──────────────────────────────────────────── */
+function getDaysIntoMonth() {
+    return new Date().getDate();
+}
+
+
+/* ────────────────────────────────────────────
+   BUILD HTML FOR ONE TIME PERIOD CARD
+   
+   Creates the HTML for "Today", "This Week",
+   or "This Month" — one card at a time.
+   
+   cssClass = "today", "week", or "month"
+              (controls the top border color)
+   ──────────────────────────────────────────── */
+function buildTimeSummaryItemHTML(label, stats, cssClass, showAvg) {
+    var html = '';
+
+    html += '<div class="time-summary-item ' + cssClass + '">';
+    html +=   '<span class="time-summary-period">' + label + '</span>';
+
+    if (stats.count === 0) {
+        // No expenses in this period
+        html += '<span class="time-summary-amount">' + formatCurrency(0) + '</span>';
+        html += '<span class="time-summary-empty">No expenses</span>';
+    } else {
+        // Show total, count, and daily average
+        var itemWord = stats.count === 1 ? 'expense' : 'expenses';
+
+        html += '<span class="time-summary-amount">' + formatCurrency(stats.total) + '</span>';
+        html += '<span class="time-summary-count">' + stats.count + ' ' + itemWord + '</span>';
+
+        if (showAvg) {
+            html += '<span class="time-summary-avg">~' + formatCurrency(stats.avg) + '/day</span>';
+        }
+    }
+
+    html += '</div>';
+    return html;
+}
+
+
+/* ────────────────────────────────────────────
+   RENDER TIME SUMMARY
+   
+   The main render function for this feature.
+   Calculates stats for today, this week, this month,
+   then builds and inserts the HTML.
+   ──────────────────────────────────────────── */
+function renderTimeSummary() {
+
+    // Hide card if no expenses exist
+    if (state.expenses.length === 0) {
+        timeSummaryCard.style.display = 'none';
+        return;
+    }
+
+    // Show the card
+    timeSummaryCard.style.display = 'block';
+
+    // Calculate stats for each time period
+    var todayStats = getTimePeriodStats(
+        state.expenses,
+        isToday,
+        1
+    );
+
+    var weekStats = getTimePeriodStats(
+        state.expenses,
+        function(dateString) { return isWithinLastDays(dateString, 7); },
+        7
+    );
+
+    var daysIntoMonth = getDaysIntoMonth();
+    var monthStats = getTimePeriodStats(
+        state.expenses,
+        isCurrentMonth,
+        daysIntoMonth
+    );
+
+    // Build the HTML (3 cards side by side)
+    var html = '';
+    html += buildTimeSummaryItemHTML('Today',      todayStats, 'today', false);
+    html += buildTimeSummaryItemHTML('This Week',   weekStats,  'week',  true);
+    html += buildTimeSummaryItemHTML('This Month',  monthStats, 'month', true);
+
+    timeSummaryContent.innerHTML = html;
+}
+
+
+/* ────────────────────────────────────────────
+   HOOK INTO EXISTING renderAll()
+   
+   We save the original renderAll function,
+   then replace it with a new version that
+   calls the original + our new function.
+   
+   This way we NEVER modify the original code.
+   
+   BEFORE:
+     renderAll() → renders summary, tabs, list, breakdown
+   
+   AFTER:
+     renderAll() → renders summary, tabs, list, breakdown
+                   + renders time summary (NEW)
+   ──────────────────────────────────────────── */
+var _originalRenderAll = renderAll;
+
+renderAll = function() {
+    _originalRenderAll();   // Run everything that already existed
+    renderTimeSummary();    // Then run our new feature
+};
+
+
+/* ────────────────────────────────────────────
+   FIRST RENDER
+   
+   init() already ran above and called the OLD renderAll.
+   So the time summary hasn't been rendered yet.
+   We call it once now to show it immediately.
+   ──────────────────────────────────────────── */
+renderTimeSummary();
