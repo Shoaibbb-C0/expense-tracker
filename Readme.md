@@ -8,6 +8,7 @@ A simple expense tracker built using HTML, CSS, and JavaScript.
 - View total amount
 - Data saved using localStorage
 - Search and filter
+- Weekly and Monthly Summary
 
 ## What I Learned
 - DOM manipulation
